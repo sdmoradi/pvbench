@@ -11,20 +11,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Options configures one disposable benchmark run.
 type Options struct {
-	Namespace   string
-	StorageClass string
-	Size         string
-	Profile      string
-	Timeout      time.Duration
+	Namespace     string
+	StorageClass  string
+	Size          string
+	Profile       string
+	Timeout       time.Duration
 	KeepResources bool
 }
 
@@ -44,8 +43,7 @@ func Run(ctx context.Context, client kubernetes.Interface, opts Options, output 
 	if err != nil || qty.Sign() <= 0 {
 		return fmt.Errorf("invalid PVC size %q: must be a positive Kubernetes storage quantity", opts.Size)
 	}
-	minimum := resource.MustParse("1Gi")
-	if qty.Cmp(minimum) < 0 {
+	if qty.Cmp(resource.MustParse("1Gi")) < 0 {
 		return fmt.Errorf("PVC size must be at least 1Gi for the current FIO test file")
 	}
 	if _, err := fioScript(opts.Profile); err != nil {
@@ -122,18 +120,15 @@ func Run(ctx context.Context, client kubernetes.Interface, opts Options, output 
 }
 
 func jobLogs(ctx context.Context, client kubernetes.Interface, namespace, jobName string) (string, error) {
-	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.Set{"batch.kubernetes.io/job-name": jobName}.AsSelector().String(),
-	})
+	selector := labels.Set{"batch.kubernetes.io/job-name": jobName}.AsSelector().String()
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return "", fmt.Errorf("list benchmark Job pods: %w", err)
 	}
 	if len(pods.Items) == 0 {
 		// Older clusters may use the legacy job-name label.
-		pods, err = client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector("metadata.name", "").String(),
-			LabelSelector: labels.Set{"job-name": jobName}.AsSelector().String(),
-		})
+		selector = labels.Set{"job-name": jobName}.AsSelector().String()
+		pods, err = client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 		if err != nil {
 			return "", fmt.Errorf("find benchmark Job pod: %w", err)
 		}
@@ -142,8 +137,7 @@ func jobLogs(ctx context.Context, client kubernetes.Interface, namespace, jobNam
 		return "", fmt.Errorf("no Pod found for benchmark Job %q", jobName)
 	}
 	pod := pods.Items[0]
-	req := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{Container: "fio"})
-	stream, err := req.Stream(ctx)
+	stream, err := client.CoreV1().Pods(namespace).GetLogs(pod.Name, &corev1.PodLogOptions{Container: "fio"}).Stream(ctx)
 	if err != nil {
 		return "", fmt.Errorf("read benchmark logs from Pod %q: %w", pod.Name, err)
 	}
@@ -155,9 +149,13 @@ func jobLogs(ctx context.Context, client kubernetes.Interface, namespace, jobNam
 	return string(data), nil
 }
 
-func ptrPolicy(policy metav1.DeletionPropagation) *metav1.DeletionPropagation { return &policy }
+func ptrPolicy(policy metav1.DeletionPropagation) *metav1.DeletionPropagation {
+	return &policy
+}
 
 func joinError(first, second error) error {
-	if first == nil { return second }
+	if first == nil {
+		return second
+	}
 	return fmt.Errorf("%v; additionally: %w", first, second)
 }
