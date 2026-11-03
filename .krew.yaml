@@ -34,3 +34,15 @@ spec:
           arch: arm64
       {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
       bin: kubectl-pvbench
+    - selector:
+        matchLabels:
+          os: windows
+          arch: amd64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_windows_amd64.zip" .TagName }}
+      bin: kubectl-pvbench.exe
+    - selector:
+        matchLabels:
+          os: windows
+          arch: arm64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_windows_arm64.zip" .TagName }}
+      bin: kubectl-pvbench.exe
