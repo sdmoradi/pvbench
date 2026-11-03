@@ -1,0 +1,42 @@
+version: 2
+
+project_name: pvbench
+
+builds:
+  - id: pvbench
+    main: ./cmd/kubectl-pvbench
+    binary: kubectl-pvbench
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/sdmoradi/pvbench/internal/cli.version={{.Version}}
+
+archives:
+  - id: pvbench
+    builds:
+      - pvbench
+    formats:
+      - tar.gz
+    name_template: "pvbench_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: false
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+release:
+  mode: keep-existing
+  replace_existing_artifacts: true
