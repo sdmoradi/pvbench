@@ -123,7 +123,7 @@ func fioScript(profile string) (string, error) {
 	b.WriteString("FILE=" + benchmarkDataPath + "\n")
 	b.WriteString("SIZE=1G\n")
 	b.WriteString("echo 'PVBench: preparing benchmark file'\n")
-	b.WriteString("$FIO --name=prepare --filename=\"$FILE\" --size=$SIZE --rw=write --bs=1M --direct=1 --ioengine=libaio --iodepth=16 --numjobs=1 --group_reporting --output-format=json\n")
+	b.WriteString("$FIO --name=prepare --filename=\"$FILE\" --size=$SIZE --rw=write --bs=1M --direct=1 --ioengine=libaio --iodepth=16 --numjobs=1 --group_reporting --output-format=json --output=/dev/null\n")
 
 	for _, workload := range workloads {
 		rw := "read"
