@@ -23,9 +23,9 @@ type workloadResult struct {
 
 type fioOutput struct {
 	Jobs []struct {
-		Read  fioDirection \`json:"read"\`
-		Write fioDirection \`json:"write"\`
-	} \`json:"jobs"\`
+		Read  fioDirection `json:"read"`
+		Write fioDirection `json:"write"`
+	} `json:"jobs"`
 }
 
 type fioDirection struct {
