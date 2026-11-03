@@ -106,6 +106,47 @@ Example: use `--profile read` to run the sequential and random read workloads, o
 
 By default, pvbench deletes the temporary benchmark Job and PVC after collecting the results, including when a workload fails or times out. Use `--keep-resources` when you need to inspect the resources after a run. Resources retained with this flag must be deleted manually.
 
+
+## Releases
+
+pvbench uses [Semantic Versioning](https://semver.org/) and Conventional Commits. Every change merged into `master` is evaluated by Release Please, which opens or updates a release pull request:
+
+- `fix:` creates a PATCH release (for example, `v0.1.0` → `v0.1.1`).
+- `feat:` creates a MINOR release (for example, `v0.1.0` → `v0.2.0`).
+- A commit containing `BREAKING CHANGE:` in its footer, or using the `!` marker (for example, `feat!:`), creates a MAJOR release.
+
+When the release pull request is merged, Release Please creates the version tag. The tag triggers GoReleaser, which runs the test suite and publishes archives and checksums to the GitHub Release.
+
+### Release artifacts
+
+The release workflow currently builds these platforms:
+
+| OS | Architectures |
+|---|---|
+| Linux | amd64, arm64 |
+| macOS | amd64, arm64 |
+
+Each archive contains the `kubectl-pvbench` executable, `LICENSE`, and `README.md`. The version is embedded in the executable and is shown by `kubectl pvbench version`.
+
+### Repository setup
+
+A repository administrator must create a fine-grained personal access token (or equivalent GitHub App token) with **Contents: read/write** and **Pull requests: read/write** access to this repository. Save it as the repository Actions secret `RELEASE_PLEASE_TOKEN`.
+
+Release Please uses this token to create release pull requests and tags. Using a dedicated token is important because tags created with the default `GITHUB_TOKEN` do not trigger other GitHub Actions workflows. Once configured, merging a release PR automatically starts the tagged release workflow.
+
+### Krew distribution
+
+The root-level `.krew.yaml` is the Krew release manifest template. It describes the supported platforms and uses the Krew release helper to insert each release archive URL and its SHA-256 checksum.
+
+The official Krew index is a separate repository: [kubernetes-sigs/krew-index](https://github.com/kubernetes-sigs/krew-index). Its plugin manifest belongs at `plugins/pvbench.yaml` in that repository; it should not be committed as an index directory inside this source repository. Submit the initial manifest to the official index following the [Krew plugin submission guide](https://krew.sigs.k8s.io/docs/developer-guide/release/). Subsequent releases can be integrated through the Krew release bot after the plugin is accepted.
+
+After pvbench is indexed, users can install it with:
+
+```bash
+kubectl krew install pvbench
+kubectl pvbench version
+```
+
 ## License
 
 See [LICENSE](LICENSE).
