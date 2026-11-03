@@ -8,6 +8,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -69,12 +70,12 @@ func CreateJob(
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resourceMustParse("100m"),
-									corev1.ResourceMemory: resourceMustParse("128Mi"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resourceMustParse("2"),
-									corev1.ResourceMemory: resourceMustParse("1Gi"),
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
 								},
 							},
 						},
