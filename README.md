@@ -15,7 +15,7 @@ kubectl pvbench version
 
 ### From GitHub Releases
 
-Download the archive for your operating system and architecture from the [GitHub Releases](https://github.com/sdmoradi/pvbench/releases) page, extract it, and place the `kubectl-pvbench` binary in a directory on your `PATH`.
+Download the archive for your operating system and architecture from the [GitHub Releases](https://github.com/sdmoradi/pvbench/releases) page, extract it, and place the `kubectl-pvbench` (or `kubectl-pvbench.exe` on Windows) executable in a directory on your `PATH`.
 
 ## Usage
 
@@ -27,11 +27,11 @@ kubectl pvbench version
 kubectl pvbench inspect my-pvc -n stage
 
 # Run a read benchmark against a StorageClass
-kubectl pvbench benchmark \\
-  --storage-class longhorn \\
-  --size 2Gi \\
-  --profile read \\
-  --timeout 5m \\
+kubectl pvbench benchmark \
+  --storage-class longhorn \
+  --size 2Gi \
+  --profile read \
+  --timeout 5m \
   -n stage
 ```
 
@@ -53,8 +53,6 @@ The default profile is `all`.
 
 ### Workload types
 
-Each profile consists of the following workload types:
-
 | Workload | Access pattern | Operation | Block size |
 |---|---|---|---|
 | `seq-read` | Sequential | Read | 1 MiB |
@@ -68,8 +66,6 @@ Each profile consists of the following workload types:
 - **Write workloads** measure how quickly data can be written to the volume.
 
 ### FIO settings
-
-The current benchmark uses these FIO settings:
 
 | Setting | Value |
 |---|---|
@@ -87,8 +83,6 @@ Before running the selected workloads, pvbench writes the test file to ensure th
 These are controlled, single-job tests. Results are useful for comparing StorageClasses under the same conditions, but they do not represent every application's I/O pattern or guarantee production performance.
 
 ### Result metrics
-
-The benchmark summary reports these metrics for each workload:
 
 | Metric | Meaning |
 |---|---|
@@ -117,7 +111,6 @@ Example: use `--profile read` to run the sequential and random read workloads, o
 
 By default, pvbench deletes the temporary benchmark Job and PVC after collecting the results, including when a workload fails or times out. Use `--keep-resources` when you need to inspect the resources after a run. Resources retained with this flag must be deleted manually.
 
-
 ## Releases
 
 pvbench uses [Semantic Versioning](https://semver.org/) and Conventional Commits. Every change merged into `master` is evaluated by Release Please, which opens or updates a release pull request:
@@ -130,14 +123,13 @@ When the release pull request is merged, Release Please creates the version tag.
 
 ### Release artifacts
 
-The release workflow currently builds these platforms:
+| OS | Architectures | Archive |
+|---|---|---|
+| Linux | amd64, arm64 | `.tar.gz` |
+| macOS | amd64, arm64 | `.tar.gz` |
+| Windows | amd64, arm64 | `.zip` |
 
-| OS | Architectures |
-|---|---|
-| Linux | amd64, arm64 |
-| macOS | amd64, arm64 |
-
-Each archive contains the `kubectl-pvbench` executable, `LICENSE`, and `README.md`. The version is embedded in the executable and is shown by `kubectl pvbench version`.
+Archives contain the executable, `LICENSE`, and `README.md`. The Windows executable is named `kubectl-pvbench.exe`. The version is embedded in the executable and is shown by `kubectl pvbench version`.
 
 ### Repository setup
 
