@@ -1,0 +1,36 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: pvbench
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/sdmoradi/pvbench
+  shortDescription: Inspect and benchmark Kubernetes storage
+  description: |
+    Inspect Kubernetes PersistentVolumeClaims and benchmark Kubernetes
+    storage performance using controlled FIO workloads.
+  platforms:
+    - selector:
+        matchLabels:
+          os: linux
+          arch: amd64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+      bin: kubectl-pvbench
+    - selector:
+        matchLabels:
+          os: linux
+          arch: arm64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+      bin: kubectl-pvbench
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: amd64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+      bin: kubectl-pvbench
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: arm64
+      {{addURIAndSha "https://github.com/sdmoradi/pvbench/releases/download/{{ .TagName }}/pvbench_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+      bin: kubectl-pvbench
