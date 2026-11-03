@@ -118,12 +118,10 @@ func Run(ctx context.Context, client kubernetes.Interface, opts Options, output 
 	logs, logsErr := jobLogs(logCtx, client, opts.Namespace, job.Name)
 	logCancel()
 
-	var results []workloadResult
+	results := parseWorkloadResults(logs, opts.Profile)
 	executionErr := waitErr
 	if logsErr != nil {
 		executionErr = joinError(executionErr, logsErr)
-	} else {
-		results = parseWorkloadResults(logs, opts.Profile)
 	}
 	renderSummary(output, opts.Namespace, opts.StorageClass, opts.Size, opts.Profile, results, executionErr)
 
