@@ -84,7 +84,7 @@ persistent volumes using controlled storage workloads.`,
 		Use:   "benchmark",
 		Short: "Benchmark a StorageClass using a temporary PVC and FIO",
 		Long: `Creates a disposable PVC and Job, runs FIO against a test file,
-prints the FIO output, and removes resources created by the run.`,
+prints a human-readable FIO summary, and removes resources created by the run.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, contextNamespace, err := kube.NewClient()
 			if err != nil {
