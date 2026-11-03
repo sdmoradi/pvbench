@@ -4,6 +4,14 @@ A `kubectl` plugin for inspecting Kubernetes PersistentVolumeClaims (PVCs) and b
 
 ## Installation
 
+### With local manifest
+
+```bash
+git clone https://github.com/sdmoradi/pvbench.git
+cd pvbench
+kubectl krew install   --manifest plugins/pvbench.yaml
+```
+
 ### With Krew
 
 After pvbench is accepted into the official Krew index:
