@@ -11,6 +11,7 @@ builds:
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
@@ -25,6 +26,10 @@ archives:
       - pvbench
     formats:
       - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
     name_template: "pvbench_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
     files:
