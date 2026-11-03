@@ -27,8 +27,7 @@ type Options struct {
 	KeepResources bool
 }
 
-// Run creates a temporary PVC and FIO Job, waits for completion, prints the Job
-// logs to the supplied writer, and removes resources it created unless retained.
+// Run executes FIO, prints a parsed summary, and removes resources it created.
 func Run(ctx context.Context, client kubernetes.Interface, opts Options, output io.Writer) (retErr error) {
 	if strings.TrimSpace(opts.Namespace) == "" {
 		return fmt.Errorf("namespace is required")
@@ -59,36 +58,44 @@ func Run(ctx context.Context, client kubernetes.Interface, opts Options, output 
 	}
 	var job *batchv1.Job
 	defer func() {
+		fmt.Fprintln(output, "\nCleanup")
+		fmt.Fprintln(output, "-------")
 		if opts.KeepResources {
-			fmt.Fprintf(output, "Keeping benchmark resources: PVC %s", pvc.Name)
+			fmt.Fprintf(output, "Temporary PVC and Job retained: %s", pvc.Name)
 			if job != nil {
-				fmt.Fprintf(output, ", Job %s", job.Name)
+				fmt.Fprintf(output, ", %s", job.Name)
 			}
 			fmt.Fprintln(output)
 			return
 		}
+
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
+		var cleanupErr error
 		if job != nil {
 			if err := client.BatchV1().Jobs(opts.Namespace).Delete(cleanupCtx, job.Name, metav1.DeleteOptions{PropagationPolicy: ptrPolicy(metav1.DeletePropagationBackground)}); err != nil && !apierrors.IsNotFound(err) {
-				retErr = joinError(retErr, fmt.Errorf("delete benchmark Job %q: %w", job.Name, err))
+				cleanupErr = joinError(cleanupErr, fmt.Errorf("delete benchmark Job %q: %w", job.Name, err))
 			}
 		}
 		if err := client.CoreV1().PersistentVolumeClaims(opts.Namespace).Delete(cleanupCtx, pvc.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			retErr = joinError(retErr, fmt.Errorf("delete benchmark PVC %q: %w", pvc.Name, err))
+			cleanupErr = joinError(cleanupErr, fmt.Errorf("delete benchmark PVC %q: %w", pvc.Name, err))
 		}
+		if cleanupErr != nil {
+			fmt.Fprintf(output, "FAILED: %v\n", cleanupErr)
+			retErr = joinError(retErr, cleanupErr)
+			return
+		}
+		fmt.Fprintln(output, "Temporary PVC and Job deleted.")
 	}()
 
 	job, err = CreateJob(ctx, client, opts.Namespace, pvc.Name, opts.Profile)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(output, "Benchmark started: namespace=%s storageClass=%s pvc=%s job=%s profile=%s size=%s\n",
-		opts.Namespace, opts.StorageClass, pvc.Name, job.Name, opts.Profile, opts.Size)
 
 	runCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
-	err = wait.PollUntilContextCancel(runCtx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
+	waitErr := wait.PollUntilContextCancel(runCtx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 		current, err := client.BatchV1().Jobs(opts.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -103,19 +110,31 @@ func Run(ctx context.Context, client kubernetes.Interface, opts Options, output 
 		}
 		return false, nil
 	})
-	if err != nil {
-		if runCtx.Err() != nil {
-			return fmt.Errorf("benchmark timed out after %s", opts.Timeout)
-		}
-		return fmt.Errorf("wait for benchmark Job: %w", err)
+	if waitErr != nil && runCtx.Err() != nil {
+		waitErr = fmt.Errorf("benchmark timed out after %s", opts.Timeout)
 	}
 
-	logs, err := jobLogs(ctx, client, opts.Namespace, job.Name)
-	if err != nil {
-		return err
+	logCtx, logCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	logs, logsErr := jobLogs(logCtx, client, opts.Namespace, job.Name)
+	logCancel()
+
+	var results []workloadResult
+	executionErr := waitErr
+	if logsErr != nil {
+		executionErr = joinError(executionErr, logsErr)
+	} else {
+		results = parseWorkloadResults(logs, opts.Profile)
 	}
-	fmt.Fprintln(output, "\nFIO OUTPUT")
-	fmt.Fprintln(output, logs)
+	renderSummary(output, opts.Namespace, opts.StorageClass, opts.Size, opts.Profile, results, executionErr)
+
+	if executionErr != nil {
+		return executionErr
+	}
+	for _, result := range results {
+		if !result.Success {
+			return fmt.Errorf("one or more FIO workloads did not produce valid results")
+		}
+	}
 	return nil
 }
 
@@ -126,7 +145,6 @@ func jobLogs(ctx context.Context, client kubernetes.Interface, namespace, jobNam
 		return "", fmt.Errorf("list benchmark Job pods: %w", err)
 	}
 	if len(pods.Items) == 0 {
-		// Older clusters may use the legacy job-name label.
 		selector = labels.Set{"job-name": jobName}.AsSelector().String()
 		pods, err = client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector})
 		if err != nil {
